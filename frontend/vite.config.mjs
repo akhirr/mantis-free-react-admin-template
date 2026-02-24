@@ -17,7 +17,14 @@ export default defineConfig(({ mode }) => {
     },
     preview: {
       open: true,
+<<<<<<< HEAD:frontend/vite.config.mjs
       host: 'localhost'
+=======
+      host: true,
+      fs: {
+        allow: ['..']
+      }
+>>>>>>> 53d4a0efd97d9aa751599d89a7daa92032fac0d0:vite.config.mjs
     },
     define: {
       global: 'window'
