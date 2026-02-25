@@ -5,7 +5,9 @@ import dotenv from 'dotenv';
 // routes
 import authRoutes from './routes/authRoutes.js';
 import aktivitasRoutes from './routes/aktivitasRoutes.js';
-import rekapRoutes from './routes/rekapAbsenRoutes.js'; // <-- nanti untuk rekap absensi
+import rekapAbsenRoutes from './routes/rekapAbsenRoutes.js'; 
+import tppRoutes from './routes/tppRoutes.js';
+
 
 dotenv.config();
 
@@ -24,7 +26,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/aktivitas', aktivitasRoutes);
 
 // Rekap Absensi
-app.use('/api/rekap', rekapRoutes);
+app.use('/api/rekap', rekapAbsenRoutes);
+
+// TPP
+app.use('/api/tpp', tppRoutes);
 
 // Root test
 app.get('/', (req, res) => {

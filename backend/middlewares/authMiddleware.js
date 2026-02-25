@@ -17,7 +17,8 @@ export const verifyToken = (req, res, next) => {
 
     // ⭐ mapping fleksibel
     req.user = {
-      id: decoded.id || decoded.userId || decoded.sub
+      id: decoded.id || decoded.userId || decoded.sub,
+      nip: decoded.nip
     };
 
     if (!req.user.id) {

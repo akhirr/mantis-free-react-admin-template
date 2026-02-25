@@ -31,50 +31,37 @@ import {
 } from '@ant-design/icons';
 
 export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
-
   // ================= STATE =================
   const [form, setForm] = useState({
     tanggal: '',
-    lokasi: '',        // ⬅️ STRING (radio)
+    lokasi: '',        // STRING (radio)
     kategori: '',
     namaKegiatan: '',
     deskripsi: '',
     status: '',
-    durasi: '',
+    durasi: '',        // JAM (UI)
     linkBukti: ''
   });
 
   // ================= AUTO TANGGAL =================
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-
-    setForm((prev) => ({
-      ...prev,
-      tanggal: today
-    }));
+    setForm((prev) => ({ ...prev, tanggal: today }));
   }, []);
-
 
   // ================= HANDLE CHANGE =================
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
-
 
   // ================= CEK ABSEN =================
   const handleCekAbsen = () => {
     alert(`Absen ${form.tanggal} : HADIR ✅`);
   };
 
-
   // ================= VALIDASI =================
   const validate = () => {
-
     if (!form.tanggal) return 'Tanggal wajib diisi';
     if (!form.lokasi) return 'Lokasi wajib dipilih';
     if (!form.kategori) return 'Kategori wajib dipilih';
@@ -82,27 +69,39 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
     if (!form.durasi) return 'Durasi wajib dipilih';
     if (!form.status) return 'Status wajib dipilih';
     if (!form.linkBukti) return 'Link bukti wajib diisi';
-
     return null;
   };
-
 
   // ================= SUBMIT =================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const error = validate();
-
     if (error) {
       alert(error);
       return;
     }
 
-    console.log('DATA DIKIRIM:', form); // DEBUG
+    // 1) Convert durasi JAM -> MENIT
+    //    contoh: 1 jam -> 60 menit
+    const durasiMenit = Math.round(Number(form.durasi) * 60);
+
+    // 2) Mapping nama field agar sesuai backend (snake_case)
+    const payload = {
+      tanggal: form.tanggal,
+      lokasi: form.lokasi,
+      kategori: form.kategori,
+      nama_kegiatan: form.namaKegiatan,
+      deskripsi: form.deskripsi,
+      status: form.status,
+      durasi: durasiMenit,          // <= menit (int)
+      link_bukti: form.linkBukti
+    };
+
+    console.log('DATA DIKIRIM:', payload); // DEBUG
 
     try {
-
-      await onSubmit(form);
+      await onSubmit(payload);
 
       // reset
       setForm({
@@ -117,15 +116,11 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
       });
 
       onClose();
-
     } catch (err) {
-
       console.error(err);
       alert('Gagal menyimpan data');
-
     }
   };
-
 
   return (
     <Dialog
@@ -135,10 +130,8 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
       fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
-
       {/* HEADER */}
       <DialogTitle>
-        
         <Typography variant="h5" fontWeight={600}>
           Tambah Aktivitas
         </Typography>
@@ -151,15 +144,11 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
       <Divider />
 
       <form onSubmit={handleSubmit}>
-
         {/* CONTENT */}
         <DialogContent>
-
           <Stack spacing={2.5} mt={1}>
-
             {/* TANGGAL */}
             <Stack direction="row" spacing={2}>
-
               <TextField
                 label="Tanggal"
                 type="date"
@@ -192,16 +181,11 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
               >
                 Cek Absen
               </Button>
-
             </Stack>
-
 
             {/* LOKASI */}
             <FormControl required>
-
-              <Typography fontWeight={600}>
-                Lokasi Kerja
-              </Typography>
+              <Typography fontWeight={600}>Lokasi Kerja</Typography>
 
               <RadioGroup
                 row
@@ -209,7 +193,6 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
                 value={form.lokasi}
                 onChange={handleChange}
               >
-
                 <FormControlLabel
                   value="Kantor/WFO"
                   control={<Radio />}
@@ -221,15 +204,11 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
                   control={<Radio />}
                   label="Dinas Luar / WFA"
                 />
-
               </RadioGroup>
-
             </FormControl>
-
 
             {/* KATEGORI */}
             <FormControl fullWidth required>
-
               <InputLabel>Kategori</InputLabel>
 
               <Select
@@ -248,9 +227,7 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
                 <MenuItem value="Lapangan">Lapangan</MenuItem>
                 <MenuItem value="Koordinasi">Koordinasi</MenuItem>
               </Select>
-
             </FormControl>
-
 
             {/* NAMA */}
             <TextField
@@ -269,7 +246,6 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
               }}
             />
 
-
             {/* DESKRIPSI */}
             <TextField
               label="Deskripsi"
@@ -281,10 +257,8 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
               rows={3}
             />
 
-
-            {/* DURASI */}
+            {/* DURASI (UI: JAM, DISIMPAN: MENIT) */}
             <FormControl fullWidth required>
-
               <InputLabel>Durasi</InputLabel>
 
               <Select
@@ -298,19 +272,16 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
                   </InputAdornment>
                 }
               >
-                {[1,2,3,4,5,6].map((i) => (
+                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
                   <MenuItem key={i} value={i}>
-                    {i} Jam
+                    {i} Jam ({i * 60} menit)
                   </MenuItem>
                 ))}
               </Select>
-
             </FormControl>
-
 
             {/* STATUS */}
             <FormControl fullWidth required>
-
               <InputLabel>Status</InputLabel>
 
               <Select
@@ -323,9 +294,7 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
                 <MenuItem value="Final">Final</MenuItem>
                 <MenuItem value="Revisi">Revisi</MenuItem>
               </Select>
-
             </FormControl>
-
 
             {/* LINK */}
             <TextField
@@ -344,38 +313,22 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit }) {
                 )
               }}
             />
-
           </Stack>
-
         </DialogContent>
-
 
         <Divider />
 
-
         {/* FOOTER */}
         <DialogActions sx={{ p: 2 }}>
-
-          <Button
-            onClick={onClose}
-            variant="outlined"
-            sx={{ borderRadius: 2 }}
-          >
+          <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 2 }}>
             Batal
           </Button>
 
-          <Button
-            type="submit"
-            variant="contained"
-            sx={{ borderRadius: 2, px: 3 }}
-          >
+          <Button type="submit" variant="contained" sx={{ borderRadius: 2, px: 3 }}>
             Simpan Data
           </Button>
-
         </DialogActions>
-
       </form>
-
     </Dialog>
   );
 }

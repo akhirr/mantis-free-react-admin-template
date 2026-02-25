@@ -10,7 +10,6 @@ import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
 
 // DataGrid
 import { DataGrid } from '@mui/x-data-grid';
@@ -26,23 +25,18 @@ import SearchOutlined from '@ant-design/icons/SearchOutlined';
 
 const columns = [
   { field: 'id', headerName: 'No', width: 70, align: 'center', headerAlign: 'center' },
-  { field: 'nip', headerName: 'NIP', width: 180 },
-  { field: 'hadir', headerName: 'Hadir', width: 100, align: 'center' },
-  { field: 'izin', headerName: 'Izin', width: 100, align: 'center' },
-  { field: 'alpha', headerName: 'Alpha', width: 100, align: 'center' },
-  { field: 'cuti', headerName: 'Cuti', width: 100, align: 'center' },
-  { field: 'sakit', headerName: 'Sakit', width: 100, align: 'center' },
-  { field: 'dinas_luar', headerName: 'Dinas Luar', width: 120, align: 'center' },
-  { field: 'total_hari', headerName: 'Total Hari', width: 120, align: 'center' },
-  { field: 'total_telat', headerName: 'Total Telat (mnt)', width: 150, align: 'center' },
-  { field: 'cepat_pulang', headerName: 'Cepat Pulang (mnt)', width: 170, align: 'center' }
+  { field: 'tanggal', headerName: 'Tanggal', width: 170, align: 'center', headerAlign: 'center' },
+  { field: 'jam_absen_masuk', headerName: 'Jam Datang', width: 120, align: 'center', headerAlign: 'center' },
+  { field: 'jam_absen_keluar', headerName: 'Jam Pulang', width: 120, align: 'center', headerAlign: 'center' },
+  { field: 'terlambat_menit', headerName: 'Terlambat Datang', width: 150, align: 'center', headerAlign: 'center' },
+  { field: 'cepat_pulang_menit', headerName: 'Cepat Pulang', width: 130, align: 'center', headerAlign: 'center' },
+  { field: 'keterangan', headerName: 'Keterangan', width: 160, align: 'center', headerAlign: 'center' }
 ];
 
 // ==============================|| PAGE ||============================== //
 
 export default function RekapAbsensiBulanan() {
   const theme = useTheme();
-
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const [data, setData] = useState([]);
@@ -54,14 +48,11 @@ export default function RekapAbsensiBulanan() {
   const [search, setSearch] = useState('');
   const [menuAnchor, setMenuAnchor] = useState(null);
 
-  // ================= GET DATA =================
-
   const fetchRekap = async () => {
     try {
       setLoading(true);
 
       const token = localStorage.getItem('token');
-
       if (!token) {
         alert('Token tidak ditemukan, silakan login ulang');
         return;
@@ -70,47 +61,51 @@ export default function RekapAbsensiBulanan() {
       const res = await axios.get(
         `${API_URL}/api/rekap/rekap-bulanan?bulan=${bulan}&tahun=${tahun}`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      // Tambah ID untuk DataGrid
-      const result = res.data.map((item, index) => ({
+      // DataGrid wajib ada "id" unik
+      
+      const result = (res.data || []).map((item, index) => ({
         id: index + 1,
         ...item
       }));
 
       setData(result);
-
     } catch (err) {
       console.error('Gagal ambil rekap:', err);
 
       if (err.response?.status === 401) {
-        alert('Session habis, silakan login ulang');
+        alert('Session habis / token tidak valid. Silakan login ulang.');
+      } else {
+        alert('Gagal mengambil data rekap.');
       }
-
     } finally {
       setLoading(false);
     }
   };
 
-  // ================= AUTO LOAD =================
-
+  // load awal (biarkan, karena ada tombol "Tampilkan")
   useEffect(() => {
     fetchRekap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ================= SEARCH =================
-
+  // SEARCH: karena halaman pegawai sudah terfilter nip di backend,
+  // search kita arahkan ke tanggal/jam/keterangan
   const rows = useMemo(() => {
-    return data.filter((row) =>
-      row.nip.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [data, search]);
+    const q = (search || '').toLowerCase();
+    if (!q) return data;
 
-  // ==============================|| UI ||============================== //
+    return data.filter((row) => {
+      const tgl = (row.tanggal ?? '').toString().toLowerCase();
+      const masuk = (row.jam_absen_masuk ?? '').toString().toLowerCase();
+      const keluar = (row.jam_absen_keluar ?? '').toString().toLowerCase();
+      const ket = (row.status ?? '').toString().toLowerCase();
+      return `${tgl} ${masuk} ${keluar} ${ket}`.includes(q);
+    });
+  }, [data, search]);
 
   return (
     <MainCard
@@ -119,14 +114,8 @@ export default function RekapAbsensiBulanan() {
       sx={{ width: '100%' }}
       secondary={
         <Stack direction="row" spacing={1} alignItems="center">
-
           {/* BULAN */}
-          <TextField
-            size="small"
-            select
-            value={bulan}
-            onChange={(e) => setBulan(e.target.value)}
-          >
+          <TextField size="small" select value={bulan} onChange={(e) => setBulan(e.target.value)}>
             <MenuItem value="1">Januari</MenuItem>
             <MenuItem value="2">Februari</MenuItem>
             <MenuItem value="3">Maret</MenuItem>
@@ -142,32 +131,23 @@ export default function RekapAbsensiBulanan() {
           </TextField>
 
           {/* TAHUN */}
-          <TextField
-            size="small"
-            value={tahun}
-            onChange={(e) => setTahun(e.target.value)}
-            sx={{ width: 90 }}
-          />
+          <TextField size="small" value={tahun} onChange={(e) => setTahun(e.target.value)} sx={{ width: 90 }} />
 
           {/* TAMPILKAN */}
-          <Button
-            size="small"
-            variant="contained"
-            onClick={fetchRekap}
-            sx={{ textTransform: 'none' }}
-          >
+          <Button size="small" variant="contained" onClick={fetchRekap} sx={{ textTransform: 'none' }}>
             Tampilkan
           </Button>
 
           {/* SEARCH */}
           <TextField
             size="small"
-            placeholder="Cari NIP..."
+            placeholder="Cari tanggal / keterangan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{
               startAdornment: <SearchOutlined style={{ marginRight: 8 }} />
             }}
+            sx={{ minWidth: 220 }}
           />
 
           {/* EXPORT */}
@@ -175,19 +155,13 @@ export default function RekapAbsensiBulanan() {
             <EllipsisOutlined />
           </IconButton>
 
-          <Menu
-            anchorEl={menuAnchor}
-            open={Boolean(menuAnchor)}
-            onClose={() => setMenuAnchor(null)}
-          >
-            <MenuItem>Export PDF</MenuItem>
-            <MenuItem>Export Excel</MenuItem>
+          <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+            <MenuItem onClick={() => setMenuAnchor(null)}>Export PDF</MenuItem>
+            <MenuItem onClick={() => setMenuAnchor(null)}>Export Excel</MenuItem>
           </Menu>
-
         </Stack>
       }
     >
-
       <Paper
         sx={{
           height: 480,
@@ -196,7 +170,6 @@ export default function RekapAbsensiBulanan() {
           borderTop: `1px solid ${theme.palette.divider}`
         }}
       >
-
         <DataGrid
           rows={rows}
           columns={columns}
@@ -208,30 +181,13 @@ export default function RekapAbsensiBulanan() {
           disableRowSelectionOnClick
           sx={{
             border: 0,
-
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: theme.palette.grey[100]
-            },
-
-            '& .MuiDataGrid-columnHeaderTitle': {
-              fontWeight: 700,
-              fontSize: '0.875rem'
-            },
-
-            '& .MuiDataGrid-cell': {
-              fontSize: '0.875rem',
-              display: 'flex',
-              alignItems: 'center'
-            },
-
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: theme.palette.action.hover
-            }
+            '& .MuiDataGrid-columnHeaders': { backgroundColor: theme.palette.grey[100] },
+            '& .MuiDataGrid-columnHeaderTitle': { fontWeight: 700, fontSize: '0.875rem' },
+            '& .MuiDataGrid-cell': { fontSize: '0.875rem', display: 'flex', alignItems: 'center' },
+            '& .MuiDataGrid-row:hover': { backgroundColor: theme.palette.action.hover }
           }}
         />
-
       </Paper>
-
     </MainCard>
   );
 }
