@@ -1,83 +1,116 @@
 import * as Aktivitas from '../models/aktivitasModel.js';
+import { getStatusAbsen } from '../models/absensiModel.js';
+
+/* ================= CEK ABSEN ================= */
+export const cekAbsen = async (req, res) => {
+  try {
+    console.log("=== CEK ABSEN MASUK ===");
+    console.log("QUERY:", req.query);
+    console.log("USER:", req.user);
+
+    const { tanggal } = req.query;
+
+    if (!tanggal) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tanggal wajib dikirim'
+      });
+    }
+
+    // ===== VALIDASI 7 HARI =====
+    const today = new Date();
+    const selected = new Date(tanggal);
+
+    if (isNaN(selected)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format tanggal tidak valid'
+      });
+    }
+
+    const diffTime = today - selected;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    if (diffDays > 7 || diffDays < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tanggal hanya bisa dicek maksimal 7 hari ke belakang'
+      });
+    }
+
+    // ===== VALIDASI USER =====
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User tidak ditemukan (token invalid)'
+      });
+    }
+
+    if (!req.user.nip) {
+      console.log("NIP TIDAK ADA DI TOKEN");
+      return res.status(400).json({
+        success: false,
+        message: 'NIP tidak ditemukan di token'
+      });
+    }
+
+    const nip = req.user.nip;
+
+    const data = await getStatusAbsen(nip, tanggal);
+
+    console.log("DATA ABSEN:", data);
+
+    if (!data) {
+      return res.json({
+        success: true,
+        allowed: false,
+        message: 'Tidak ada data absensi'
+      });
+    }
+
+    const status = data.status?.toLowerCase();
+
+    const allowed =
+      status === 'hadir' ||
+      status === 'tugas luar';
+
+    return res.json({
+      success: true,
+      allowed,
+      status: data.status,
+      jam_masuk: data.jam_masuk,
+      jam_keluar: data.jam_keluar
+    });
+
+  } catch (err) {
+    console.error('CEK ABSEN ERROR:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan server'
+    });
+  }
+};
+
 
 /* ================= CREATE ================= */
-//export const store = async (req, res) => {
-//  try {
-//    const payload = {
-//      ...req.body,
-//      user_id: req.user.id
-//    };
-
-//    const data = await Aktivitas.createAktivitas(payload);
-
-//    res.status(201).json({
-//      success: true,
-//      message: 'Aktivitas berhasil dibuat',
-//      data
-//    });
-
-//  } catch (err) {
-//    console.error('STORE ERROR:', err);
-//    res.status(500).json({ success: false, message: err.message });
-//  }
-//};
-import { poolLocal } from "../config/db.js";
-
-
-export const createAktivitas = async (req, res) => {
+export const store = async (req, res) => {
   try {
-    const nip = req.user?.nip;
-    if (!nip) return res.status(401).json({ message: "Token tidak valid" });
+    const payload = {
+      ...req.body,
+      user_id: req.user.id
+    };
 
-    const userId = await getUserIdByNip(nip);
-    if (!userId) {
-      return res.status(404).json({ message: "user_id untuk nip tidak ditemukan (mapping belum ada)" });
-    }
+    const data = await Aktivitas.createAktivitas(payload);
 
-    const {
-      tanggal,        // "2026-02-25"
-      lokasi,
-      kategori,
-      nama_kegiatan,
-      deskripsi,
-      durasi,         // menit (int)
-      status,
-      link_bukti,
-    } = req.body;
+    res.status(201).json({
+      success: true,
+      message: 'Aktivitas berhasil dibuat',
+      data
+    });
 
-    if (!tanggal || !nama_kegiatan) {
-      return res.status(400).json({ message: "tanggal & nama_kegiatan wajib diisi" });
-    }
-
-    // pastikan durasi integer menit
-    const durasiMenit = Number.isFinite(Number(durasi)) ? parseInt(durasi, 10) : 0;
-    if (durasiMenit < 0) return res.status(400).json({ message: "durasi tidak valid" });
-
-    const sql = `
-      INSERT INTO aktivitas
-        (user_id, tanggal, lokasi, kategori, nama_kegiatan, deskripsi, durasi, status, link_bukti)
-      VALUES
-        ($1, $2::date, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id, user_id, tanggal, nama_kegiatan, durasi, created_at;
-    `;
-
-    const params = [
-      userId,
-      tanggal,
-      lokasi || null,
-      kategori || null,
-      nama_kegiatan,
-      deskripsi || null,
-      durasiMenit,
-      status || null,
-      link_bukti || null,
-    ];
-
-    const { rows } = await poolLocal.query(sql, params);
-    res.status(201).json(rows[0]);
   } catch (err) {
-    console.error("createAktivitas error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('STORE ERROR:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 

@@ -11,8 +11,8 @@ import RiwayatVerifikasi from 'pages/verifikasi/RiwayatAktivitas';
 
 // pages
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
-const Aktivitas = Loadable(lazy(() => import('pages/component-overview/aktivitas')));
-const RekapAbsensi = Loadable(lazy(() => import('pages/component-overview/rekap_absensi')));
+const Aktivitas = Loadable(lazy(() => import('pages/aktivitas/aktivitas')));
+const RekapAbsensi = Loadable(lazy(() => import('pages/rekap-absensi/index')));
 const TPP = Loadable(lazy(() => import('pages/component-overview/tpp')));
 
 // ==============================|| MAIN ROUTING ||============================== //

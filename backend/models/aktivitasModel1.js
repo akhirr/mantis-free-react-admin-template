@@ -1,5 +1,4 @@
-import { poolLocal } from '../config/db.js';
-const db = poolLocal;
+import db from '../config/db.js';
 
 /* ================= CREATE ================= */
 export const createAktivitas = async (data) => {
@@ -38,8 +37,6 @@ export const createAktivitas = async (data) => {
 
 /* ================= GET ALL ================= */
 export const getAllAktivitas = async (userId) => {
-  console.log("USER ID MASUK MODEL:", userId, typeof userId);
-
   const result = await db.query(
     `SELECT * FROM aktivitas
      WHERE user_id=$1
@@ -108,4 +105,3 @@ export const deleteAktivitas = async (id, userId) => {
 
   return result.rows[0];
 };
-

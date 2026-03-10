@@ -47,11 +47,15 @@ export const estimasiTPP = async (req, res) => {
     const hariKerja = hariKerjaRows.length;
 
     // Hadir (sesuaikan definisi kalau perlu)
-    const hadir = hariKerjaRows.filter(r => r.status === "Hadir" || r.jam_absen_masuk != null).length;
+    const STATUS_HADIR = ["Hadir", "Tugas Luar", "Izin", "Sakit"];
 
-    const telatAtauTidakAbsen = hariKerjaRows.filter(r =>
-      (Number(r.terlambat_menit || 0) > 0) || (r.jam_absen_masuk == null)
+    const hadir = hariKerjaRows.filter(r =>
+      STATUS_HADIR.includes(r.status) || r.jam_absen_masuk != null
     ).length;
+
+    //const telatAtauTidakAbsen = hariKerjaRows.filter(r =>
+    //  (Number(r.status || 0) > 0) || (r.jam_absen_masuk == null)
+    //).length;
 
     
     // durasi = MENIT
@@ -91,8 +95,19 @@ export const estimasiTPP = async (req, res) => {
     const kontribusiKinerja = persenKinerja * 0.6;
     const totalPersen = kontribusiKehadiran + kontribusiKinerja;
 
-    // TODO: ambil dari tabel pegawai/jabatan
-    const tppDasar = 1000000;
+    // ambil TPP dasar dari ta_tpp berdasarkan nip
+    const qTpp = `
+      SELECT COALESCE(besar_tpp, 0) AS besar_tpp
+      FROM ta_tpp
+      WHERE nip = $1
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+    const { rows: tppRows } = await poolPublic.query(qTpp, [nip]);
+
+    // besar_tpp di postgres numeric -> bisa string, jadi konversi aman:
+    const tppDasar = Number(tppRows?.[0]?.besar_tpp ?? 0);
+    // estimasi nominal = tppDasar * (totalPersen / 100)
     const estimasiNominal = Math.round(tppDasar * (totalPersen / 100));
 
     res.json({
@@ -107,7 +122,7 @@ export const estimasiTPP = async (req, res) => {
         kontribusi: Math.round(kontribusiKehadiran),
         hariKerja,
         hadir,
-        telatAtauTidakAbsen,
+      //  telatAtauTidakAbsen,
       },
 
       kinerja: {
