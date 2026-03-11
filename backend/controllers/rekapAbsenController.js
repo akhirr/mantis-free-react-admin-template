@@ -52,8 +52,24 @@ export const summaryRekap = async (req, res) => {
 
     const row = await getSummaryRekapByNip(nip, bulan, tahun);
     const result = mapSummaryRekapRow(row);
+const disiplinKerja = {
+  alpha: result.alpha || 0,
 
-    return res.json(result);
+  tl1: result.terlambat_1_30 || 0,
+  tl2: result.terlambat_31_60 || 0,
+  tl3: result.terlambat_61_90 || 0,
+  tl4: result.terlambat_91 || 0,
+
+  psw1: result.pulang_1_30 || 0,
+  psw2: result.pulang_31_60 || 0,
+  psw3: result.pulang_61_90 || 0,
+  psw4: result.pulang_91 || 0
+};
+
+return res.json({
+  ...result,
+  disiplinKerja
+});
   } catch (err) {
     console.error("summaryRekap error:", err);
 

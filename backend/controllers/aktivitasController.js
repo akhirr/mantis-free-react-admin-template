@@ -161,32 +161,77 @@ export const detail = async (req, res) => {
 
 /* ================= UPDATE ================= */
 export const update = async (req, res) => {
+
   try {
-    const data = await Aktivitas.updateAktivitas(
-      req.params.id,
-      req.user.id,
-      req.body
+
+    const id = req.params.id;
+    const data = req.body;
+
+    console.log("BODY UPDATE:", data);
+
+    /* ===== CEK DATA LAMA ===== */
+    const old = await Aktivitas.getDetailAktivitas(
+      id,
+      req.user.id
     );
 
-    if (!data) {
+    if (!old) {
       return res.status(404).json({
         success: false,
-        message: 'Data tidak ditemukan'
+        message: "Data aktivitas tidak ditemukan"
       });
     }
 
+    console.log("OLD DATA:", old);
+
+    /* ===== CEK STATUS FINAL ===== */
+    if (old.status === "Final") {
+      return res.status(400).json({
+        success: false,
+        message: "Aktivitas dengan status Final tidak dapat diedit"
+      });
+    }
+
+    /* ===== CEK BATAS 7 HARI ===== */
+
+    const today = new Date();
+    const tanggalAktivitas = new Date(old.tanggal);
+
+    const diffTime = today - tanggalAktivitas;
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    if (diffDays > 7) {
+      return res.status(400).json({
+        success: false,
+        message: "Aktivitas hanya dapat diedit maksimal 7 hari"
+      });
+    }
+
+    /* ===== PROSES UPDATE ===== */
+
+    const result = await Aktivitas.updateAktivitas(
+      id,
+      data
+    );
+
     res.json({
       success: true,
-      message: 'Data berhasil diupdate',
-      data
+      message: "Aktivitas berhasil diperbarui",
+      data: result
     });
 
   } catch (err) {
-    console.error('UPDATE ERROR:', err);
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
 
+    console.error("UPDATE ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      message: "Gagal update aktivitas"
+    });
+
+  }
+
+};
 
 /* ================= DELETE ================= */
 export const remove = async (req, res) => {

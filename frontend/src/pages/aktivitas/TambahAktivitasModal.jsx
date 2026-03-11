@@ -42,9 +42,12 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit}) {
     loadingCek,
     setLoadingCek,
     handleChange,
-    resetForm
+    resetForm,
+    maxDate,
+    minDate
   } = useAktivitasForm(open);
 
+ 
   /* ================= STATE ================= */
   const [notify, setNotify] = useState({
     open: false,
@@ -179,6 +182,10 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit}) {
                   fullWidth
                   error={!!errors.tanggal}
                   helperText={errors.tanggal}
+                  inputProps={{
+                    max: maxDate,
+                    min: minDate
+                  }}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -187,6 +194,7 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit}) {
                     )
                   }}
                 />
+
 
                 <Button
                   variant="contained"
@@ -277,13 +285,13 @@ export default function TambahAktivitasModal({ open, onClose, onSubmit}) {
               {/* NAMA */}
               <TextField
                 label="Nama Kegiatan"
-                name="namaKegiatan"
-                value={form?.namaKegiatan || ''}
+                name="nama_kegiatan"
+                value={form?.nama_kegiatan || ''}
                 onChange={handleChange}
                 fullWidth
                 disabled={!formEnabled}
-                error={!!errors.namaKegiatan}
-                helperText={errors.namaKegiatan}
+                error={!!errors.nama_kegiatan}
+                helperText={errors.nama_kegiatan}
               />
 
               {/* DESKRIPSI */}

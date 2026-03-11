@@ -42,6 +42,52 @@ export const estimasiTPP = async (req, res) => {
 
     const { rows: kalenderRows } = await poolPublic.query(sqlKalender, [nip, startDate]);
 
+const sqlDisiplin = `
+SELECT
+  COALESCE(SUM(alfa),0) AS alpha,
+
+  COALESCE(SUM(tmk1),0) AS tl1,
+  COALESCE(SUM(tmk2),0) AS tl2,
+  COALESCE(SUM(tmk3),0) AS tl3,
+  COALESCE(SUM(tmk4),0) AS tl4,
+
+  COALESCE(SUM(psw1),0) AS psw1,
+  COALESCE(SUM(psw2),0) AS psw2,
+  COALESCE(SUM(psw3),0) AS psw3,
+  COALESCE(SUM(psw4),0) AS psw4
+
+FROM absen_rekap
+WHERE nip = $1
+AND bulan = $2
+AND tahun = $3
+`;
+
+const { rows: disiplinRows } = await poolPublic.query(sqlDisiplin, [nip, bulan, tahun]);
+
+
+const disiplin = disiplinRows[0];
+const potAlpha = (disiplin.alpha || 0) * 3;
+
+const potTL1 = (disiplin.tl1 || 0) * 0.5;
+const potTL2 = (disiplin.tl2 || 0) * 1;
+const potTL3 = (disiplin.tl3 || 0) * 1.5;
+const potTL4 = (disiplin.tl4 || 0) * 2;
+
+const potPSW1 = (disiplin.psw1 || 0) * 0.5;
+const potPSW2 = (disiplin.psw2 || 0) * 1;
+const potPSW3 = (disiplin.psw3 || 0) * 1.5;
+const potPSW4 = (disiplin.psw4 || 0) * 2;
+
+const totalPotongan =
+  potAlpha +
+  potTL1 +
+  potTL2 +
+  potTL3 +
+  potTL4 +
+  potPSW1 +
+  potPSW2 +
+  potPSW3 +
+  potPSW4;
     // Hari kerja = Sen-Jum & bukan tanggal merah
     const hariKerjaRows = kalenderRows.filter(r => ![6,7].includes(Number(r.isodow)) && r.is_libur === false);
     const hariKerja = hariKerjaRows.length;
@@ -57,42 +103,52 @@ export const estimasiTPP = async (req, res) => {
     //  (Number(r.status || 0) > 0) || (r.jam_absen_masuk == null)
     //).length;
 
-    
-    // durasi = MENIT
-    const TARGET_PER_HARI = 420; // 7 jam = 420 menit
+    const sqlKinerja = `
+      SELECT
+        tanggal,
 
-    const sqlAkt = `
-      SELECT tanggal::date AS tanggal, COALESCE(SUM(durasi),0) AS total_menit
+        ROUND(
+          LEAST(
+            COALESCE(
+              SUM(durasi) FILTER (WHERE LOWER(status)='final'),
+              0
+            ),
+            8
+          ) * 100.0 / 8,
+          2
+        ) AS persen
+
       FROM aktivitas
-      WHERE id = $1
-        AND tanggal >= date_trunc('month', $2::date)::date
-        AND tanggal <  (date_trunc('month', $2::date) + interval '1 month')::date
-      GROUP BY tanggal::date
-    `;
-    const { rows: aktRows } = await poolLocal.query(sqlAkt, [id, startDate]);
 
-    const menitMap = new Map(
-      aktRows.map(x => [new Date(x.tanggal).toISOString().slice(0,10), Number(x.total_menit || 0)])
-    );
+      WHERE user_id = $1
+      AND EXTRACT(MONTH FROM tanggal) = $2
+      AND EXTRACT(YEAR FROM tanggal) = $3
 
-    let totalSkorKinerja = 0; // skor 0..hariKerja
-    let totalMenitHariKerja = 0;
+      GROUP BY tanggal
+      `;
+//kinerja
+const { rows: kinerjaRows } = await poolLocal.query(sqlKinerja,[id,bulan,tahun]);
+const totalCapaian =
+kinerjaRows.reduce(
+  (sum,row)=> sum + Number(row.persen || 0),
+  0
+);
+const persenKinerja = hariKerja
+  ? totalCapaian / hariKerja
+  : 0;
+const persenKinerjaFinal = Math.min(persenKinerja, 100);
 
-    for (const d of hariKerjaRows) {
-      const key = new Date(d.tanggal).toISOString().slice(0,10);
-      const totalMenit = menitMap.get(key) || 0;
 
-      totalMenitHariKerja += totalMenit;
-
-      const skorHarian = Math.min(totalMenit / TARGET_PER_HARI, 1); // 0..1
-      totalSkorKinerja += skorHarian;
-    }
-
+//kehadiran
     const persenKehadiran = hariKerja ? (hadir / hariKerja) * 100 : 0;
-    const persenKinerja = hariKerja ? (totalSkorKinerja / hariKerja) * 100 : 0;
-
-    const kontribusiKehadiran = persenKehadiran * 0.4;
-    const kontribusiKinerja = persenKinerja * 0.6;
+    const persenKehadiranBersih = Math.max(
+  persenKehadiran - totalPotongan,
+  0
+);
+    
+// kontribusi ke TPP
+    const kontribusiKehadiran = persenKehadiranBersih * 0.4;
+    const kontribusiKinerja = persenKinerjaFinal * 0.6;
     const totalPersen = kontribusiKehadiran + kontribusiKinerja;
 
     // ambil TPP dasar dari ta_tpp berdasarkan nip
@@ -118,24 +174,42 @@ export const estimasiTPP = async (req, res) => {
 
       kehadiran: {
         bobot: 40,
-        persen: Math.round(persenKehadiran),
-        kontribusi: Math.round(kontribusiKehadiran),
+        persen: Number(persenKehadiran.toFixed(2)),
+        persenBersih: Number(persenKehadiranBersih.toFixed(2)),
+        potonganDisiplin: Number(totalPotongan.toFixed(2)),
+        kontribusi: Number(kontribusiKehadiran.toFixed(2)),
         hariKerja,
-        hadir,
+        hadir
+
       //  telatAtauTidakAbsen,
       },
 
       kinerja: {
         bobot: 60,
-        persen: Math.round(persenKinerja),
-        kontribusi: Math.round(kontribusiKinerja),
+        persen: Number(persenKinerjaFinal.toFixed(2)),
+        kontribusi: Number(kontribusiKinerja.toFixed(2)),
         hariKerja,
-        targetMenitPerHari: TARGET_PER_HARI,
-        totalMenitHariKerja,
-      },
+        totalCapaian,
+        targetCapaian: hariKerja * 100, // misal target 7 menit per hari kerja
+        },
+      disiplin: {
+    alpha: Number(disiplin.alpha || 0),
+
+    tl1: Number(disiplin.tl1 || 0),
+    tl2: Number(disiplin.tl2 || 0),
+    tl3: Number(disiplin.tl3 || 0),
+    tl4: Number(disiplin.tl4 || 0),
+
+    psw1: Number(disiplin.psw1 || 0),
+    psw2: Number(disiplin.psw2 || 0),
+    psw3: Number(disiplin.psw3 || 0),
+    psw4: Number(disiplin.psw4 || 0)
+  }
     });
   } catch (err) {
     console.error("estimasiTPP error:", err);
     res.status(500).json({ message: "Server error" });
   }
+
+
 };

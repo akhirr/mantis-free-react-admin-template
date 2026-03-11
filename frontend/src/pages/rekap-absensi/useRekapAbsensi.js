@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import axios from 'axios';
 
 export default function useRekapAbsensi(API_URL) {
@@ -42,9 +42,7 @@ export default function useRekapAbsensi(API_URL) {
     try {
       const res = await axios.get(
         `${API_URL}/api/rekap/summary?bulan=${bulan}&tahun=${tahun}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const r = res.data || {};
@@ -87,28 +85,18 @@ export default function useRekapAbsensi(API_URL) {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Token tidak ditemukan, silakan login ulang');
-        return;
-      }
+      if (!token) return;
 
       const res = await axios.get(
         `${API_URL}/api/rekap/rekap-bulanan?bulan=${bulan}&tahun=${tahun}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const result = (res.data || []).map((item, index) => ({
-        id: index + 1,
-        ...item
-      }));
-
+      const result = (res.data || []).map((item, index) => ({ id: index + 1, ...item }));
       setData(result);
       await fetchSummary(token);
     } catch (err) {
       console.error('Gagal ambil rekap:', err);
-      alert(err.response?.data?.message || 'Gagal mengambil data rekap.');
       setData([]);
     } finally {
       setLoading(false);
@@ -128,6 +116,20 @@ export default function useRekapAbsensi(API_URL) {
     });
   }, [data, search]);
 
+  useEffect(() => { fetchRekap(); }, [bulan, tahun]);
+
+  const disiplin = {
+    alpha: summary.alpha ?? 0,
+    tmk1: summary.telat_1_30 ?? 0,
+    tmk2: summary.telat_31_60 ?? 0,
+    tmk3: summary.telat_61_90 ?? 0,
+    tmk4: summary.telat_91 ?? 0,
+    psw1: summary.pulang_1_30 ?? 0,
+    psw2: summary.pulang_31_60 ?? 0,
+    psw3: summary.pulang_61_90 ?? 0,
+    psw4: summary.pulang_91 ?? 0
+  };
+
   return {
     bulan,
     setBulan,
@@ -138,6 +140,7 @@ export default function useRekapAbsensi(API_URL) {
     loading,
     rows,
     summary,
+    disiplin,
     fetchRekap
   };
 }

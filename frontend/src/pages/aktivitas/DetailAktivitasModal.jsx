@@ -15,14 +15,21 @@ import {
 
 /* ===== STATUS BADGE ===== */
 function StatusBadge({ value }) {
+
+  const status = value?.toLowerCase();
+
   const statusMap = {
-    SELESAI: { label: 'Selesai', color: 'success' },
-    PROSES: { label: 'Proses', color: 'warning' },
-    PENDING: { label: 'Pending', color: 'default' }
+    draft: { label: "Draft", color: "warning" },
+    final: { label: "Final", color: "success" }
   };
 
-  const status = statusMap[value] || { label: value || '-', color: 'default' };
-  return <Chip label={status.label} color={status.color} size="small" />;
+  const s = statusMap[status] || {
+    label: value || "-",
+    color: "default"
+  };
+
+  return <Chip label={s.label} color={s.color} size="small" />;
+
 }
 
 StatusBadge.propTypes = { value: PropTypes.string };

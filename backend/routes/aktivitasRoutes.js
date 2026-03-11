@@ -1,4 +1,5 @@
 import express from 'express';
+
 import {
   store,
   update,
@@ -8,14 +9,23 @@ import {
   cekAbsen
 } from '../controllers/aktivitasController.js';
 
+import { rekapAktivitas } from '../controllers/rekapAktivitasController.js';
+
 import { verifyToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
+/* ===== ABSEN ===== */
+
 router.get('/cek-absen', verifyToken, cekAbsen);
 
-router.get('/', verifyToken, getAll);
+/* ===== REKAP ===== */
 
+router.get('/rekap-aktivitas', verifyToken, rekapAktivitas);
+
+/* ===== AKTIVITAS ===== */
+
+router.get('/', verifyToken, getAll);
 router.get('/:id', verifyToken, detail);
 router.post('/', verifyToken, store);
 router.put('/:id', verifyToken, update);

@@ -1,50 +1,96 @@
-import { useState } from 'react';
-import { Snackbar, Alert, Button, Stack } from '@mui/material';
+import { useState } from "react";
+import PropTypes from "prop-types";
 
-/* ===== MAIN COMPONENT ===== */
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Stack
+} from "@mui/material";
+
+import { ExclamationCircleOutlined } from "@ant-design/icons";
+
 export default function HapusAktivitasMessage({ onConfirm, activityName }) {
+
   const [open, setOpen] = useState(false);
 
-  const handleDeleteClick = () => {
-    setOpen(true); // tampilkan pesan konfirmasi
-  };
+  const handleOpen = () => setOpen(true);
 
-  const handleClose = (_, reason) => {
-    if (reason === 'clickaway') return;
-    setOpen(false);
-  };
+  const handleClose = () => setOpen(false);
 
   const handleConfirm = () => {
-    onConfirm(); // panggil fungsi hapus dari parent
+    if (onConfirm) onConfirm();
     setOpen(false);
   };
 
   return (
-    <Stack direction="row" spacing={1}>
-      <Button variant="contained" color="error" onClick={handleDeleteClick}>
+    <>
+      {/* tombol hapus */}
+      <Button
+        size="small"
+        variant="contained"
+        color="error"
+        onClick={handleOpen}
+      >
         Hapus
       </Button>
 
-      {/* Snackbar konfirmasi */}
-      <Snackbar
+      {/* modal */}
+      <Dialog
         open={open}
-        autoHideDuration={6000}
         onClose={handleClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        maxWidth="xs"
+        fullWidth
       >
-        <Alert
-          onClose={handleClose}
-          severity="warning"
-          action={
-            <Button color="inherit" size="small" onClick={handleConfirm}>
-              YA
-            </Button>
-          }
-          sx={{ width: '100%' }}
-        >
-          Hapus aktivitas <strong>{activityName || '-'}</strong>?
-        </Alert>
-      </Snackbar>
-    </Stack>
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Konfirmasi Hapus
+        </DialogTitle>
+
+        <DialogContent>
+
+          <Stack direction="row" spacing={2} alignItems="center">
+
+            <ExclamationCircleOutlined
+              style={{
+                fontSize: 26,
+                color: "#faad14"
+              }}
+            />
+
+            <Typography variant="body2">
+              Apakah Anda yakin ingin menghapus aktivitas
+              <strong> {activityName || "-"} </strong> ?
+            </Typography>
+
+          </Stack>
+
+        </DialogContent>
+
+        <DialogActions>
+
+          <Button onClick={handleClose} variant="outlined">
+            Batal
+          </Button>
+          
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirm}
+          >
+            Hapus
+          </Button>
+
+        </DialogActions>
+
+      </Dialog>
+    </>
   );
 }
+
+HapusAktivitasMessage.propTypes = {
+  onConfirm: PropTypes.func,
+  activityName: PropTypes.string
+};

@@ -24,11 +24,11 @@ export const createAktivitas = async (data) => {
     data.tanggal,
     data.lokasi,
     data.kategori,
-    data.namaKegiatan,
+    data.nama_kegiatan,
     data.deskripsi,
     data.durasi,
     data.status,
-    data.linkBukti
+    data.link_bukti
   ];
 
   const result = await db.query(query, values);
@@ -64,48 +64,43 @@ export const getDetailAktivitas = async (id, userId) => {
 
 
 /* ================= UPDATE ================= */
-export const updateAktivitas = async (id, userId, data) => {
+export const updateAktivitas = async (id, data) => {
+
+  const {
+    lokasi,
+    kategori,
+    nama_kegiatan,
+    deskripsi,
+    durasi,
+    status,
+    link_bukti
+  } = data;
+
   const query = `
-    UPDATE aktivitas SET
-      tanggal=$1,
-      lokasi=$2,
-      kategori=$3,
-      nama_kegiatan=$4,
-      deskripsi=$5,
-      durasi=$6,
-      status=$7,
-      link_bukti=$8
-    WHERE id=$9 AND user_id=$10
+    UPDATE aktivitas
+    SET
+      lokasi = $1,
+      kategori = $2,
+      nama_kegiatan = $3,
+      deskripsi = $4,
+      durasi = $5,
+      status = $6,
+      link_bukti = $7
+    WHERE id = $8
     RETURNING *
   `;
 
   const values = [
-    data.tanggal,
-    data.lokasi,
-    data.kategori,
-    data.namaKegiatan,
-    data.deskripsi,
-    data.durasi,
-    data.status,
-    data.linkBukti,
-    id,
-    userId
+    lokasi,
+    kategori,
+    nama_kegiatan,
+    deskripsi,
+    durasi,
+    status,
+    link_bukti,
+    id
   ];
 
   const result = await db.query(query, values);
   return result.rows[0];
 };
-
-
-/* ================= DELETE ================= */
-export const deleteAktivitas = async (id, userId) => {
-  const result = await db.query(
-    `DELETE FROM aktivitas
-     WHERE id=$1 AND user_id=$2
-     RETURNING id`,
-    [id, userId]
-  );
-
-  return result.rows[0];
-};
-

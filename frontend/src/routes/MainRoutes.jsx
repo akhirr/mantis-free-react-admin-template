@@ -12,8 +12,9 @@ import RiwayatVerifikasi from 'pages/verifikasi/RiwayatAktivitas';
 // pages
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
 const Aktivitas = Loadable(lazy(() => import('pages/aktivitas/aktivitas')));
+const RekapAktivitas = Loadable(lazy(() => import('pages/rekap_aktivitas/rekap_aktivitas')));
 const RekapAbsensi = Loadable(lazy(() => import('pages/rekap-absensi/index')));
-const TPP = Loadable(lazy(() => import('pages/component-overview/tpp')));
+const TPP = Loadable(lazy(() => import('pages/perhitunganTPP/perhitunganTPP')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -35,6 +36,10 @@ const MainRoutes = {
     {
       path: 'aktivitas',
       element: <Aktivitas />
+    },
+     {
+      path: 'rekap_aktivitas',
+      element: <RekapAktivitas />
     },
 
     // Rekap Absensi
